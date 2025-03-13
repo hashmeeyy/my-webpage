@@ -64,7 +64,7 @@
       cursor: pointer;
       transition: background-color 0.3s ease;
       margin-top: 10px;
-      margin-right: 5px;
+      width: 100%;
     }
     button:hover {
       background-color: #66d3c3;
@@ -151,12 +151,6 @@
     
     <!-- زر عرض ونسخ النتيجة -->
     <button onclick="fetchData()">عرض ونسخ النتيجة</button>
-
-    <!-- زر مسح محتوى ملف Google Doc -->
-    <button onclick="clearGoogleDoc()">مسح ملف Google Doc</button>
-
-    <!-- زر عرض عدد العمليات (عدد الأسطر) -->
-    <button onclick="getOperationCount()">عرض عدد العمليات</button>
     
     <h2>النتيجة:</h2>
     <!-- عداد الحروف -->
@@ -172,7 +166,7 @@
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
 
     /*************** رابط Web App الخاص بـ Apps Script ***************/
-    const webAppUrl = "https://script.google.com/macros/s/AKfycbwdMsytbQh_hMHGT3qEsH3vpSonIqFfJJgE7Whk12eHBKKexz_G_GtULO6xZ_oM5No6/exec";
+    const webAppUrl = "https://script.google.com/macros/s/AKfycbwdmwMP-Znso_P3zhoMrxhA2EddW9yueBjHDINkAmwduCYp0mWGk7Qpa-qXiS4nbt-lCQ/exec";
 
     /*************** جلب بيانات Google Sheets وتعبئة القوائم المنسدلة ***************/
     fetch(url)
@@ -219,11 +213,12 @@
 
     /*************** دالة لإرسال الرسالة إلى Google Doc عبر Web App ***************/
     function sendToGoogleDoc(message) {
-      // إرسال طلب POST مع action = addMessage
       fetch(webAppUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: "addMessage", message: message })
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: message })
       })
       .then(response => response.json())
       .then(data => {
@@ -292,42 +287,6 @@
       navigator.clipboard.writeText(text).catch(err => {
         console.error('خطأ في النسخ:', err);
       });
-    }
-
-    /*************** دالة لمسح محتوى Google Doc ***************/
-    function clearGoogleDoc() {
-      fetch(webAppUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: "clearDoc" })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.status === "success") {
-          alert("تم مسح محتوى ملف Google Doc بنجاح!");
-        } else {
-          alert("حدث خطأ أثناء مسح المستند: " + data.message);
-        }
-      })
-      .catch(error => console.error('خطأ في مسح المستند:', error));
-    }
-
-    /*************** دالة لعرض عدد العمليات (عدد الأسطر في Google Doc) ***************/
-    function getOperationCount() {
-      fetch(webAppUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: "getCount" })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.status === "success") {
-          alert("عدد العمليات (عدد الأسطر): " + data.count);
-        } else {
-          alert("حدث خطأ أثناء جلب عدد العمليات: " + data.message);
-        }
-      })
-      .catch(error => console.error('خطأ في جلب عدد العمليات:', error));
     }
   </script>
 </body>
