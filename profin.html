@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Sheets Data Fetch</title>
+  <!-- خط Cairo من جوجل -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: linear-gradient(to right, #74ebd5, #ACB6E5);
+      font-family: 'Cairo', sans-serif;
+      color: #333;
+      line-height: 1.6;
+      padding: 10px;
+    }
+    .container {
+      max-width: 700px;
+      margin: 10px auto;
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    }
+    h2 {
+      color: #444;
+      font-size: 22px;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    h3 {
+      color: #555;
+      font-size: 16px;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.3s ease;
+    }
+    input[type="text"]:focus,
+    select:focus {
+      border-color: #74ebd5;
+      outline: none;
+    }
+    button {
+      background-color: #74ebd5;
+      color: #fff;
+      padding: 8px 16px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-top: 10px;
+      margin-right: 5px;
+    }
+    button:hover {
+      background-color: #66d3c3;
+    }
+    /* تنسيق عداد الحروف */
+    #charCount {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 5px;
+      text-align: center;
+    }
+    #result {
+      background-color: #f9f9f9;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+      white-space: pre-wrap;
+      margin-top: 5px;
+      font-size: 16px;
+      min-height: 60px; 
+    }
+    /* تنسيق شبكة الحقول لتقسيمها لعمودين */
+    .grid-container {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .grid-column {
+      flex: 1;
+      min-width: 300px;
+    }
+    .field {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>تكوين البرومت</h2>
+    <input type="text" id="userMessage" placeholder="اكتب المشهد هنا...">
+    
+    <!-- تقسيم الحقول لعمودين -->
+    <div class="grid-container">
+      <!-- العمود الأول -->
+      <div class="grid-column">
+        <div class="field">
+          <h3>زاوية التصوير</h3>
+          <select id="selectA"></select>
+        </div>
+        <div class="field">
+          <h3>عمر الشخصية </h3>
+          <select id="selectC"></select>
+        </div>
+        <div class="field">
+          <h3>ملابس الشخصيه</h3>
+          <select id="selectE"></select>
+        </div>
+        <div class="field">
+          <h3>تعابيير الشخصيه</h3>
+          <select id="selectG"></select>
+        </div>
+      </div>
+      <!-- العمود الثاني -->
+      <div class="grid-column">
+        <div class="field">
+          <h3>بيئه المشهد</h3>
+          <select id="selectI"></select>
+        </div>
+        <div class="field">
+          <h3>توقيت المشهد </h3>
+          <select id="selectK"></select>
+        </div>
+        <div class="field">
+          <h3>حاله المشهد</h3>
+          <select id="selectM"></select>
+        </div>
+        <div class="field">
+          <h3>اعدادات التصوير </h3>
+          <select id="selectO"></select>
+        </div>
+      </div>
+    </div>
+    
+    <!-- زر عرض ونسخ النتيجة -->
+    <button onclick="fetchData()">عرض ونسخ النتيجة</button>
+
+    <!-- زر مسح محتوى ملف Google Doc -->
+    <button onclick="clearGoogleDoc()">مسح ملف Google Doc</button>
+
+    <!-- زر عرض عدد العمليات (عدد الأسطر) -->
+    <button onclick="getOperationCount()">عرض عدد العمليات</button>
+    
+    <h2>النتيجة:</h2>
+    <!-- عداد الحروف -->
+    <p id="charCount"></p>
+    <p id="result"></p>
+  </div>
+
+  <script>
+    /*************** إعدادات Google Sheets ***************/
+    const SHEET_ID = '1ZGdfeacDPFb24oJe95821HX6C_K8wyvxxTTdVW90k3k'; 
+    const API_KEY = 'AIzaSyC_oeA7XcGDGzWxfFCsp4Ne4iIjWDwhAas'; 
+    const RANGE = 'Sheet1!A:P'; 
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+
+    /*************** رابط Web App الخاص بـ Apps Script ***************/
+    const webAppUrl = "https://script.google.com/macros/s/AKfycbwdMsytbQh_hMHGT3qEsH3vpSonIqFfJJgE7Whk12eHBKKexz_G_GtULO6xZ_oM5No6/exec";
+
+    /*************** جلب بيانات Google Sheets وتعبئة القوائم المنسدلة ***************/
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        if (!data.values || data.values.length === 0) {
+          console.error('لا توجد بيانات متاحة في الشيت.');
+          return;
+        }
+        const values = data.values;
+        
+        const selectA = document.getElementById('selectA');
+        const selectC = document.getElementById('selectC');
+        const selectE = document.getElementById('selectE');
+        const selectG = document.getElementById('selectG');
+        const selectI = document.getElementById('selectI');
+        const selectK = document.getElementById('selectK');
+        const selectM = document.getElementById('selectM'); 
+        const selectO = document.getElementById('selectO'); 
+
+        // تفريغ القوائم قبل تعبئتها
+        selectA.innerHTML = '';
+        selectC.innerHTML = '';
+        selectE.innerHTML = '';
+        selectG.innerHTML = '';
+        selectI.innerHTML = '';
+        selectK.innerHTML = '';
+        selectM.innerHTML = '';
+        selectO.innerHTML = '';
+
+        // تعبئة القوائم المنسدلة
+        for (let i = 1; i < values.length; i++) {
+          if (values[i].length > 0)  selectA.innerHTML += `<option value="${values[i][0]}">${values[i][0]}</option>`;
+          if (values[i].length > 2)  selectC.innerHTML += `<option value="${values[i][2]}">${values[i][2]}</option>`;
+          if (values[i].length > 4)  selectE.innerHTML += `<option value="${values[i][4]}">${values[i][4]}</option>`;
+          if (values[i].length > 6)  selectG.innerHTML += `<option value="${values[i][6]}">${values[i][6]}</option>`;
+          if (values[i].length > 8)  selectI.innerHTML += `<option value="${values[i][8]}">${values[i][8]}</option>`;
+          if (values[i].length > 10) selectK.innerHTML += `<option value="${values[i][10]}">${values[i][10]}</option>`;
+          if (values[i].length > 12) selectM.innerHTML += `<option value="${values[i][12]}">${values[i][12]}</option>`;
+          if (values[i].length > 14) selectO.innerHTML += `<option value="${values[i][14]}">${values[i][14]}</option>`;
+        }
+      })
+      .catch(error => console.error('خطأ في جلب البيانات من الشيت:', error));
+
+    /*************** دالة لإرسال الرسالة إلى Google Doc عبر Web App ***************/
+    function sendToGoogleDoc(message) {
+      // إرسال طلب POST مع action = addMessage
+      fetch(webAppUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: "addMessage", message: message })
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('تم الإضافة بنجاح:', data);
+      })
+      .catch(error => console.error('خطأ في إرسال البيانات إلى Google Doc:', error));
+    }
+
+    /*************** دالة لعرض النتيجة ونسخها ***************/
+    function fetchData() {
+      // جلب بيانات الشيت (المخزنة مسبقًا في المتغير url)
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (!data.values || data.values.length === 0) {
+            console.error('لا توجد بيانات متاحة في الشيت.');
+            return;
+          }
+          const values = data.values;
+
+          // قراءة اختيارات المستخدم
+          const selectedA = document.getElementById('selectA').value;
+          const selectedC = document.getElementById('selectC').value;
+          const selectedE = document.getElementById('selectE').value;
+          const selectedG = document.getElementById('selectG').value;
+          const selectedI = document.getElementById('selectI').value;
+          const selectedK = document.getElementById('selectK').value;
+          const selectedM = document.getElementById('selectM').value;
+          const selectedO = document.getElementById('selectO').value;
+          const userMessage = document.getElementById('userMessage').value;
+
+          let resultA = '', resultC = '', resultE = '', resultG = '', resultI = '', resultK = '';
+          let resultM = '', resultO = '';
+
+          // البحث عن القيم المقابلة في صفوف الشيت
+          for (let i = 1; i < values.length; i++) {
+            if (values[i].length > 1  && values[i][0]  === selectedA) resultA = values[i][1];
+            if (values[i].length > 3  && values[i][2]  === selectedC) resultC = values[i][3];
+            if (values[i].length > 5  && values[i][4]  === selectedE) resultE = values[i][5];
+            if (values[i].length > 7  && values[i][6]  === selectedG) resultG = values[i][7];
+            if (values[i].length > 9  && values[i][8]  === selectedI) resultI = values[i][9];
+            if (values[i].length > 11 && values[i][10] === selectedK) resultK = values[i][11];
+            if (values[i].length > 13 && values[i][12] === selectedM) resultM = values[i][13];
+            if (values[i].length > 15 && values[i][14] === selectedO) resultO = values[i][15];
+          }
+
+          // بناء النتيجة النهائية
+          const finalResult = 
+            `${userMessage}\n\n${resultA}\n${resultC}\n${resultE}\n${resultG}\n${resultI}\n${resultK}\n${resultM}\n${resultO}`;
+
+          // عرضها في الصفحة
+          document.getElementById('result').innerText = finalResult;
+          document.getElementById('charCount').innerText = "عدد الأحرف: " + finalResult.length;
+
+          // نسخها للحافظة
+          copyToClipboard(finalResult);
+
+          // إرسالها إلى Google Apps Script ليضيفها في مستند Google Doc
+          sendToGoogleDoc(finalResult);
+        })
+        .catch(error => console.error('خطأ في جلب البيانات من الشيت:', error));
+    }
+
+    /*************** دالة نسخ للنص ***************/
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).catch(err => {
+        console.error('خطأ في النسخ:', err);
+      });
+    }
+
+    /*************** دالة لمسح محتوى Google Doc ***************/
+    function clearGoogleDoc() {
+      fetch(webAppUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: "clearDoc" })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert("تم مسح محتوى ملف Google Doc بنجاح!");
+        } else {
+          alert("حدث خطأ أثناء مسح المستند: " + data.message);
+        }
+      })
+      .catch(error => console.error('خطأ في مسح المستند:', error));
+    }
+
+    /*************** دالة لعرض عدد العمليات (عدد الأسطر في Google Doc) ***************/
+    function getOperationCount() {
+      fetch(webAppUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: "getCount" })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert("عدد العمليات (عدد الأسطر): " + data.count);
+        } else {
+          alert("حدث خطأ أثناء جلب عدد العمليات: " + data.message);
+        }
+      })
+      .catch(error => console.error('خطأ في جلب عدد العمليات:', error));
+    }
+  </script>
+</body>
+</html>
